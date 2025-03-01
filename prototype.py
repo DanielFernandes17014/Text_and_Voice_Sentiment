@@ -58,9 +58,8 @@ def analyze_sentence(sentence):
     }
 
 
-if __name__ == "__main__":
-    sentence = input("Enter a sentence: ")
-    result = analyze_sentence(sentence)
-    for key, value in result.items():
-        print(f"{key}: {value}")
+sentence = input("Enter a sentence: ")
+result = analyze_sentence(sentence)
+for key, value in result.items():
+    print(f"{key}: {value}")
 
