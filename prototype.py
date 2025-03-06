@@ -1,13 +1,13 @@
 from textblob import TextBlob
-from transformers import pipeline, AutoModelForSeq2SeqLM, AutoTokenizer
+from transformers import pipeline, AutoModelForSeq2SeqLM, AutoTokenizer,AutoModelForSequenceClassification
 import torch
 
 # Load AI-based sentiment and emotion analysis models
 sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert/distilbert-base-uncased-finetuned-sst-2-english")
-emotion_pipeline = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base")
+emotion_pipeline = pipeline("text-classification", model="joeddav/distilbert-base-uncased-go-emotions-student")
 
 # Load AI-based factuality model using BART-based NLI
-factuality_pipeline = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+factuality_pipeline = pipeline("text-classification", model="facebook/bart-large-mnli")
 
 # Load AI-based negation detection model
 negation_pipeline = pipeline("text-classification", model="siebert/sentiment-roberta-large-english")
@@ -25,30 +25,30 @@ def correct_sentence(sentence):
 
 
 def classify_factuality(sentence):
-    labels = ["fact", "opinion", "false"]  # Possíveis categorias
-    result = factuality_pipeline(sentence, candidate_labels=labels)
-    return result["labels"][0]  # Retorna a categoria mais provável
-
+    result = factuality_pipeline(sentence)
+    return result[0]['label']  # Returns 'entailment', 'contradiction', or 'neutral'
 
 def analyze_sentence(sentence):
+    #correção Gramatical
+    corrected_sentence = correct_sentence(sentence)
+
+
     # Análise de polaridade e subjetividade (TextBlob)
-    blob = TextBlob(sentence)
+    blob = TextBlob(corrected_sentence)
     polarity = blob.sentiment.polarity
     subjectivity = blob.sentiment.subjectivity
 
     # Análise de sentimento (positivo/negativo) e emoção
-    sentiment_result = sentiment_pipeline(sentence)[0]['label']
-    emotion_result = emotion_pipeline(sentence)[0]['label']
+    sentiment_result = sentiment_pipeline(corrected_sentence)[0]['label']
+    emotion_result = emotion_pipeline(corrected_sentence)[0]['label']
 
     # Classificação de factualidade
-    factuality_result = classify_factuality(sentence)
+    factuality_result = classify_factuality(corrected_sentence)
 
     # Detecção simples de negação (usando modelo de sentimento como proxy)
-    negation_result = negation_pipeline(sentence)
+    negation_result = negation_pipeline(corrected_sentence)
     negation = "Negation" if negation_result[0]['label'] == 'negative' else "Affirmation"
 
-    # Correção gramatical
-    corrected_sentence = correct_sentence(sentence)
 
     return {
         "Original Sentence": sentence,
@@ -65,12 +65,16 @@ def analyze_sentence(sentence):
 if __name__ == "__main__":
     # Lista de frases para teste (algumas bem escritas, outras com erros)
     sentences = [
-        "I love going to the park on sunny days.",
-        "I realy enyoj to read boks about psychology.",
-        "He will tri to parse that code untill it works.",
-        "The Earth is round.",
+        "the earth is round.",
+        "i love her",
+        "He will tyr to parse that code untill it works.",
+        "The Earth is flat.",
         "I do not think it's correct.",
-        "He never said that he would come."
+        "He never said that he would come.",
+        "hy how hve u bene ? im so wrroied abut u we need to talk",
+        "can u spto being rediculous ?",
+        "i luv that about him, can yu belive that?"
+
     ]
 
     for sentence in sentences:
