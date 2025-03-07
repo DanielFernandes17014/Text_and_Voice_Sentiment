@@ -17,6 +17,10 @@ tokenizer = AutoTokenizer.from_pretrained("grammarly/coedit-large")
 model = AutoModelForSeq2SeqLM.from_pretrained("grammarly/coedit-large")
 
 
+
+
+
+
 def correct_sentence(sentence):
     inputs = tokenizer(sentence, return_tensors="pt")
     outputs = model.generate(**inputs, max_length=100, num_beams=5)
@@ -31,7 +35,6 @@ def classify_factuality(sentence):
 def analyze_sentence(sentence):
     #correção Gramatical
     corrected_sentence = correct_sentence(sentence)
-
 
     # Análise de polaridade e subjetividade (TextBlob)
     blob = TextBlob(corrected_sentence)
