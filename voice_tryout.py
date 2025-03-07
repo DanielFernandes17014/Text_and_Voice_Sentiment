@@ -10,12 +10,16 @@ recognizer = sr.Recognizer()
 
 def transcribe_speech():
     with sr.Microphone() as source:
-        messagebox.showinfo("Listening", "Now listening... Speak now.")
+        btn_listen.config(text="Listening...", state=tk.DISABLED)
+        root.update()
         recognizer.adjust_for_ambient_noise(source)
         audio = recognizer.listen(source)
+
+    btn_listen.config(text="Start Listening", state=tk.NORMAL)
+    root.update()
+
     try:
         text = recognizer.recognize_google(audio)
-        messagebox.showinfo("Transcription", f"Transcribed: {text}")
         print(f"Transcribed: {text}")
         analyze_text(text)
     except sr.UnknownValueError:
@@ -48,7 +52,6 @@ def analyze_text(text):
     # Display results in a message box and console
     output = (f"Polarity: {polarity}\nSubjectivity: {subjectivity}\n"
               f"Sentiment: {sentiment['label']}\nEmotion: {emotion['label']}\nFactuality: {factuality}")
-    messagebox.showinfo("Analysis Results", output)
     print(output)
 
 
