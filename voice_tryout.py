@@ -15,7 +15,7 @@ recognizer = sr.Recognizer()
 # Function to plot and update the spectrogram
 def update_spectrogram():
     fs = 44100  # Sampling frequency
-    duration = 3  # Duration of recording
+    duration = 1.5  # Duration of recording
     recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='float32')
     sd.wait()
     plt.clf()
