@@ -1,17 +1,36 @@
 import speech_recognition as sr
 import tkinter as tk
 from tkinter import messagebox
+import matplotlib.pyplot as plt
+import numpy as np
+import sounddevice as sd
 from transformers import pipeline
 from textblob import TextBlob
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # Initialize speech recognizer
 recognizer = sr.Recognizer()
+
+
+# Function to plot and update the spectrogram
+def update_spectrogram():
+    fs = 44100  # Sampling frequency
+    duration = 3  # Duration of recording
+    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='float32')
+    sd.wait()
+    plt.clf()
+    plt.specgram(recording[:, 0], Fs=fs, cmap='inferno')
+    plt.xlabel('Time')
+    plt.ylabel('Frequency')
+    canvas.draw()
+    return recording
 
 
 def transcribe_speech():
     with sr.Microphone() as source:
         btn_listen.config(text="Listening...", state=tk.DISABLED)
         root.update()
+        recording = update_spectrogram()
         recognizer.adjust_for_ambient_noise(source)
         audio = recognizer.listen(source)
 
@@ -58,6 +77,10 @@ def analyze_text(text):
 # GUI setup
 root = tk.Tk()
 root.title("Speech Analyzer")
+
+fig, ax = plt.subplots(figsize=(5, 3))
+canvas = FigureCanvasTkAgg(fig, master=root)
+canvas.get_tk_widget().pack()
 
 btn_listen = tk.Button(root, text="Start Listening", command=transcribe_speech, padx=20, pady=10)
 btn_listen.pack(pady=20)
