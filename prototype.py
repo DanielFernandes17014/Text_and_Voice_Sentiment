@@ -63,7 +63,7 @@ if __name__ == "__main__":
         "I do not think it's correct.",
         "He never said that he would come.",
         "hy how hve u bene ? im so wrroied abut u we need to talk",
-        "can u spto being rediculous ?",
+        "can u stpo being rediculous ?",
         "i luv that about him, can yu belive that?"
     ]
 
@@ -75,3 +75,6 @@ if __name__ == "__main__":
         for key, value in result.items():
             print(f"{key}: {value}")
         print("------------------------------------------------\n")
+
+        
+

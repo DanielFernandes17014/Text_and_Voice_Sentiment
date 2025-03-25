@@ -1,38 +1,27 @@
 import speech_recognition as sr
 import tkinter as tk
-from tkinter import messagebox
-import matplotlib.pyplot as plt
-import numpy as np
-import sounddevice as sd
 from transformers import pipeline
 from textblob import TextBlob
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # Initialize speech recognizer
 recognizer = sr.Recognizer()
 
+# Load AI-based sentiment and emotion analysis models
+sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert/distilbert-base-uncased-finetuned-sst-2-english")
+emotion_pipeline = pipeline("text-classification", model="joeddav/distilbert-base-uncased-go-emotions-student")
+factuality_pipeline = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
-# Function to plot and update the spectrogram
-def update_spectrogram():
-    fs = 44100  # Sampling frequency
-    duration = 1.5  # Duration of recording
-    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='float32')
-    sd.wait()
-    plt.clf()
-    plt.specgram(recording[:, 0], Fs=fs, cmap='inferno')
-    plt.xlabel('Time')
-    plt.ylabel('Frequency')
-    canvas.draw()
-    return recording
+# Store transcriptions for batch processing
+transcriptions = []
 
 
 def transcribe_speech():
     with sr.Microphone() as source:
         btn_listen.config(text="Listening...", state=tk.DISABLED)
         root.update()
-        recording = update_spectrogram()
         recognizer.adjust_for_ambient_noise(source)
-        audio = recognizer.listen(source)
+        print("Adjusting for ambient noise. Please wait.")
+        audio = recognizer.listen(source, phrase_time_limit=10)
 
     btn_listen.config(text="Start Listening", state=tk.NORMAL)
     root.update()
@@ -40,49 +29,50 @@ def transcribe_speech():
     try:
         text = recognizer.recognize_google(audio)
         print(f"Transcribed: {text}")
-        analyze_text(text)
+        transcriptions.append(text)
+        if len(transcriptions) >= 5:  # Process in batches of 5
+            analyze_text(transcriptions)
+            transcriptions.clear()
     except sr.UnknownValueError:
-        messagebox.showerror("Error", "Could not understand audio")
+        print("Error: Could not understand audio")
     except sr.RequestError:
-        messagebox.showerror("Error", "Speech recognition service is unavailable")
+        print("Error: Speech recognition service is unavailable")
 
 
-# Load AI-based sentiment and emotion analysis models
-sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert/distilbert-base-uncased-finetuned-sst-2-english")
-emotion_pipeline = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base")
+def analyze_text(texts):
+    # Sentiment & Emotion in batch
+    sentiments = sentiment_pipeline(texts)
+    emotions = emotion_pipeline(texts)
 
-# Load AI-based factuality model using BART-based NLI
-factuality_pipeline = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+    # Factuality analysis (one by one since it's zero-shot)
+    factualities = [factuality_pipeline(text, candidate_labels=["FACT", "NEUTRAL", "CONTRADICTION"])['labels'][0] for
+                    text in texts]
 
+    for i, text in enumerate(texts):
+        # Polarity & Subjectivity
+        blob = TextBlob(text)
+        polarity = blob.sentiment.polarity
+        subjectivity = blob.sentiment.subjectivity
 
-def analyze_text(text):
-    # Sentiment & Emotion
-    sentiment = sentiment_pipeline(text)[0]
-    emotion = emotion_pipeline(text)[0]
-
-    # Factuality analysis
-    factuality = factuality_pipeline(text, candidate_labels=["FACT", "NEUTRAL", "CONTRADICTION"])['labels'][0]
-
-    # Polarity & Subjectivity
-    blob = TextBlob(text)
-    polarity = blob.sentiment.polarity
-    subjectivity = blob.sentiment.subjectivity
-
-    # Display results in a message box and console
-    output = (f"Polarity: {polarity}\nSubjectivity: {subjectivity}\n"
-              f"Sentiment: {sentiment['label']}\nEmotion: {emotion['label']}\nFactuality: {factuality}")
-    print(output)
+        # Display results in console
+        output = (f"Text: {text}\nPolarity: {polarity}\nSubjectivity: {subjectivity}\n"
+                  f"Sentiment: {sentiments[i]['label']}\nEmotion: {emotions[i]['label']}\nFactuality: {factualities[i]}\n"
+                  f"{'-' * 50}")
+        print(output)
 
 
 # GUI setup
 root = tk.Tk()
 root.title("Speech Analyzer")
 
-fig, ax = plt.subplots(figsize=(5, 3))
-canvas = FigureCanvasTkAgg(fig, master=root)
-canvas.get_tk_widget().pack()
-
 btn_listen = tk.Button(root, text="Start Listening", command=transcribe_speech, padx=20, pady=10)
 btn_listen.pack(pady=20)
 
+
+# Cleanup on exit
+def on_closing():
+    root.destroy()
+
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
 root.mainloop()
